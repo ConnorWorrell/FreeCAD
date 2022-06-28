@@ -43,13 +43,14 @@
 #include <Base/Exception.h>
 #include <Base/UnitsApi.h>
 #include <Base/Tools.h>
+#include <App/ExpressionParser.h>
 
 #include "QuantitySpinBox.h"
 #include "QuantitySpinBox_p.h"
 #include "Command.h"
 #include "DlgExpressionInput.h"
 #include "Tools.h"
-
+#include <App/DocumentObject.h>
 
 using namespace Gui;
 using namespace App;
@@ -84,7 +85,7 @@ public:
         return text;
     }
 
-    bool validate(QString& input, Base::Quantity& result) const
+    bool validate(QString& input, Base::Quantity& result, const App::ObjectIdentifier& path) const
     {
         Q_Q(const QuantitySpinBox);
 
@@ -99,7 +100,7 @@ public:
         auto validateInput = [&](QString& tmp) -> QValidator::State {
             int pos = 0;
             QValidator::State state;
-            Base::Quantity res = validateAndInterpret(tmp, pos, state);
+            Base::Quantity res = validateAndInterpret(tmp, pos, state, path);
             res.setFormat(quantity.getFormat());
             if (state == QValidator::Acceptable) {
                 success = true;
@@ -149,13 +150,30 @@ public:
             return false;
         }
     }
-    Base::Quantity validateAndInterpret(QString& input, int& pos, QValidator::State& state) const
+    Base::Quantity validateAndInterpret(QString& input, int& pos, QValidator::State& state, const App::ObjectIdentifier& path) const
     {
         Base::Quantity res;
         const double max = this->maximum;
         const double min = this->minimum;
 
         QString copy = input;
+
+		try{
+			std::shared_ptr<Expression> expr(ExpressionParser::parse(path.getDocumentObject(), input.toUtf8().constData()));
+  
+			if (expr) {
+				std::unique_ptr<Expression> result(expr->eval());
+				NumberExpression * n = Base::freecad_dynamic_cast<NumberExpression>(result.get());
+				Base::Quantity value = n->getQuantity();
+				QString msg = value.getUserString();
+				//input = msg;
+				copy = msg;
+
+			}
+		}
+		catch(...){
+			qDebug() << "Expression Parse Failed:";
+		}
 
         int len = copy.size();
 
@@ -286,7 +304,7 @@ end:
             res.setValue(max > 0 ? min : max);
         }
 
-        input = copy;
+        //input = copy;
         return res;
     }
 
@@ -482,7 +500,8 @@ void QuantitySpinBox::validateInput()
     int pos = 0;
     QValidator::State state;
     QString text = lineEdit()->text();
-    d->validateAndInterpret(text, pos, state);
+	const App::ObjectIdentifier & path = getPath();
+    d->validateAndInterpret(text, pos, state, path);
     if (state != QValidator::Acceptable) {
         lineEdit()->setText(d->validStr);
     }
@@ -538,7 +557,8 @@ void QuantitySpinBox::userInput(const QString & text)
 
     QString tmp = text;
     Base::Quantity res;
-    if (d->validate(tmp, res)) {
+	const App::ObjectIdentifier & path = getPath();
+    if (d->validate(tmp, res, path)) {
         d->validStr = tmp;
         d->validInput = true;
     }
@@ -990,10 +1010,11 @@ Base::Quantity QuantitySpinBox::valueFromText(const QString &text) const
     QString copy = text;
     int pos = lineEdit()->cursorPosition();
     QValidator::State state = QValidator::Acceptable;
-    Base::Quantity quant = d->validateAndInterpret(copy, pos, state);
+	const App::ObjectIdentifier & path = getPath();
+    Base::Quantity quant = d->validateAndInterpret(copy, pos, state, path);
     if (state != QValidator::Acceptable) {
         fixup(copy);
-        quant = d->validateAndInterpret(copy, pos, state);
+        quant = d->validateAndInterpret(copy, pos, state, path);
     }
 
     return quant;
@@ -1004,7 +1025,8 @@ QValidator::State QuantitySpinBox::validate(QString &text, int &pos) const
     Q_D(const QuantitySpinBox);
 
     QValidator::State state;
-    d->validateAndInterpret(text, pos, state);
+	const App::ObjectIdentifier & path = getPath();
+    d->validateAndInterpret(text, pos, state, path);
     return state;
 }
 
