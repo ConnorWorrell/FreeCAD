@@ -157,17 +157,34 @@ public:
         const double min = this->minimum;
 
         QString copy = input;
+		double value = min;
+		bool ok = false;
+		
+		if (locale.negativeSign() != QLatin1Char('-'))
+			copy.replace(locale.negativeSign(), QLatin1Char('-'));
+		if (locale.positiveSign() != QLatin1Char('+'))
+			copy.replace(locale.positiveSign(), QLatin1Char('+'));
 
 		try{
-			std::shared_ptr<Expression> expr(ExpressionParser::parse(path.getDocumentObject(), input.toUtf8().constData()));
+			std::shared_ptr<Expression> expr(ExpressionParser::parse(path.getDocumentObject(), copy.toUtf8().constData()));
   
 			if (expr) {
 				std::unique_ptr<Expression> result(expr->eval());
 				NumberExpression * n = Base::freecad_dynamic_cast<NumberExpression>(result.get());
-				Base::Quantity value = n->getQuantity();
-				QString msg = value.getUserString();
+
+				//Base::Quantity res1 = n->getQuantity();
+				res = n->getQuantity();
+				value = res.getValue();
+				qDebug() << "Value" << value;
+				
+
+				//QString msg = res.getUserString();
 				//input = msg;
-				copy = msg;
+				//copy = msg;
+
+				//ok = parseString(copy, res, value);
+
+				ok = true;
 
 			}
 		}
@@ -175,119 +192,115 @@ public:
 			qDebug() << "Expression Parse Failed:";
 		}
 
-        int len = copy.size();
+        //int len = copy.size();
 
-        const bool plus = max >= 0;
-        const bool minus = min <= 0;
+        //const bool plus = max >= 0;
+        //const bool minus = min <= 0;
 
-        switch (len) {
-        case 0:
-            state = max != min ? QValidator::Intermediate : QValidator::Invalid;
-            goto end;
-        case 1:
-            if (copy.at(0) == locale.decimalPoint()) {
-                state = QValidator::Intermediate;
-                copy.prepend(QLatin1Char('0'));
-                pos++;
-                len++;
-                goto end;
-            }
-            else if (copy.at(0) == QLatin1Char('+')) {
-                // the quantity parser doesn't allow numbers of the form '+1.0'
-                state = QValidator::Invalid;
-                goto end;
-            }
-            else if (copy.at(0) == QLatin1Char('-')) {
-                if (minus)
-                    state = QValidator::Intermediate;
-                else
-                    state = QValidator::Invalid;
-                goto end;
-            }
-            break;
-        case 2:
-            if (copy.at(1) == locale.decimalPoint()
-                && (plus && copy.at(0) == QLatin1Char('+'))) {
-                state = QValidator::Intermediate;
-                goto end;
-            }
-            if (copy.at(1) == locale.decimalPoint()
-                && (minus && copy.at(0) == QLatin1Char('-'))) {
-                state = QValidator::Intermediate;
-                copy.insert(1, QLatin1Char('0'));
-                pos++;
-                len++;
-                goto end;
-            }
-            break;
-        default: break;
-        }
+        //switch (len) {
+        //case 0:
+        //    state = max != min ? QValidator::Intermediate : QValidator::Invalid;
+        //    goto end;
+        //case 1:
+        //    if (copy.at(0) == locale.decimalPoint()) {
+        //        state = QValidator::Intermediate;
+        //        copy.prepend(QLatin1Char('0'));
+        //        pos++;
+        //        len++;
+        //        goto end;
+        //    }
+        //    else if (copy.at(0) == QLatin1Char('+')) {
+        //        // the quantity parser doesn't allow numbers of the form '+1.0'
+        //        state = QValidator::Invalid;
+        //        goto end;
+        //    }
+        //    else if (copy.at(0) == QLatin1Char('-')) {
+        //        if (minus)
+        //            state = QValidator::Intermediate;
+        //        else
+        //            state = QValidator::Invalid;
+        //        goto end;
+        //    }
+        //    break;
+        //case 2:
+        //    if (copy.at(1) == locale.decimalPoint()
+        //        && (plus && copy.at(0) == QLatin1Char('+'))) {
+        //        state = QValidator::Intermediate;
+        //        goto end;
+        //    }
+        //    if (copy.at(1) == locale.decimalPoint()
+        //        && (minus && copy.at(0) == QLatin1Char('-'))) {
+        //        state = QValidator::Intermediate;
+        //        copy.insert(1, QLatin1Char('0'));
+        //        pos++;
+        //        len++;
+        //        goto end;
+        //    }
+        //    break;
+        //default: break;
+        //}
 
         {
-            if (copy.at(0) == locale.groupSeparator()) {
-                state = QValidator::Invalid;
-                goto end;
-            }
-            else if (len > 1) {
-                bool decOccurred = false;
-                for (int i = 0; i<copy.size(); i++) {
-                    if (copy.at(i) == locale.decimalPoint()) {
-                        // Disallow multiple decimal points within the same numeric substring
-                        if (decOccurred) {
-                            state = QValidator::Invalid;
-                            goto end;
-                        }
-                        decOccurred = true;
-                    }
-                    // Reset decOcurred if non-numeric character found
-                    else if (!(copy.at(i) == locale.groupSeparator() || copy.at(i).isDigit())) {
-                        decOccurred = false;
-                    }
-                }
-            }
+            //if (copy.at(0) == locale.groupSeparator()) {
+            //    state = QValidator::Invalid;
+            //    goto end;
+            //}
+            //else if (len > 1) {
+            //    bool decOccurred = false;
+            //    for (int i = 0; i<copy.size(); i++) {
+            //        if (copy.at(i) == locale.decimalPoint()) {
+            //            // Disallow multiple decimal points within the same numeric substring
+            //            if (decOccurred) {
+            //                state = QValidator::Invalid;
+            //                goto end;
+            //            }
+            //            decOccurred = true;
+            //        }
+            //        // Reset decOcurred if non-numeric character found
+            //        else if (!(copy.at(i) == locale.groupSeparator() || copy.at(i).isDigit())) {
+            //            decOccurred = false;
+            //        }
+            //    }
+            //}
 
-            if (locale.negativeSign() != QLatin1Char('-'))
-                copy.replace(locale.negativeSign(), QLatin1Char('-'));
-            if (locale.positiveSign() != QLatin1Char('+'))
-                copy.replace(locale.positiveSign(), QLatin1Char('+'));
 
-            double value = min;
-            bool ok = parseString(copy, res, value);
+            //double value = min;
+            //bool ok = parseString(copy, res, value);
 
             if (!ok) {
                 // input may not be finished
                 state = QValidator::Intermediate;
             }
             else if (value >= min && value <= max) {
-                if (copy.endsWith(locale.decimalPoint())) {
-                    // input shouldn't end with a decimal point
-                    state = QValidator::Intermediate;
-                }
-                else if (res.getUnit().isEmpty() && !this->unit.isEmpty()) {
-                    // if not dimensionless the input should have a dimension
-                    state = QValidator::Intermediate;
-                }
-                else if (res.getUnit() != this->unit) {
-                    // If the user input is of the form "number * unit", "number + unit"
-                    // or "number - unit" it's rejected by the quantity parser and it's
-                    // assumed that the user input is not complete yet (Intermediate).
-                    // However, if the user input is of the form "number / unit" it's accepted
-                    // by the parser but because the units mismatch it's considered as invalid
-                    // and the last valid input will be restored.
-                    // See #0004422: PartDesign value input does not accept trailing slash
-                    // To work around this issue of the quantity parser it's checked if the
-                    // inversed unit matches and if yes the input is also considered as not
-                    // complete.
-                    if (res.getUnit().pow(-1) == this->unit)
-                        state = QValidator::Intermediate;
-                    else
-                        state = QValidator::Invalid;
-                }
-                else {
+            //    if (copy.endsWith(locale.decimalPoint())) {
+            //        // input shouldn't end with a decimal point
+            //        state = QValidator::Intermediate;
+            //    }
+            //    else if (res.getUnit().isEmpty() && !this->unit.isEmpty()) {
+            //        // if not dimensionless the input should have a dimension
+            //        state = QValidator::Intermediate;
+            //    }
+            //    else if (res.getUnit() != this->unit) {
+            //        // If the user input is of the form "number * unit", "number + unit"
+            //        // or "number - unit" it's rejected by the quantity parser and it's
+            //        // assumed that the user input is not complete yet (Intermediate).
+            //        // However, if the user input is of the form "number / unit" it's accepted
+            //        // by the parser but because the units mismatch it's considered as invalid
+            //        // and the last valid input will be restored.
+            //        // See #0004422: PartDesign value input does not accept trailing slash
+            //        // To work around this issue of the quantity parser it's checked if the
+            //        // inversed unit matches and if yes the input is also considered as not
+            //        // complete.
+            //        if (res.getUnit().pow(-1) == this->unit)
+            //            state = QValidator::Intermediate;
+            //        else
+            //            state = QValidator::Invalid;
+            //    }
+             //   else {
                     state = QValidator::Acceptable;
-                }
+              //  }
             }
-            else if (max == min) { // when max and min is the same the only non-Invalid input is max (or min)
+			else if (max == min) { // when max and min is the same the only non-Invalid input is max (or min)
                 state = QValidator::Invalid;
             }
             else {
@@ -299,7 +312,7 @@ public:
                 }
             }
         }
-end:
+//end:
         if (state != QValidator::Acceptable) {
             res.setValue(max > 0 ? min : max);
         }
