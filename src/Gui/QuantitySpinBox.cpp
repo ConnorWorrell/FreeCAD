@@ -178,6 +178,11 @@ public:
 
 		ok = parseString(copy, res, value, path);
 
+		// If result has not unit: add default unit
+		if (res.getUnit().isEmpty()){
+			res.setUnit(unit);
+		}
+
 		if (!ok) {
 			// input may not be finished
 			state = QValidator::Intermediate;
