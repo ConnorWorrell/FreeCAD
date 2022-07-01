@@ -98,9 +98,8 @@ public:
         QString tmp = input;
 
         auto validateInput = [&](QString& tmp) -> QValidator::State {
-            int pos = 0;
             QValidator::State state;
-            Base::Quantity res = validateAndInterpret(tmp, pos, state, path);
+            Base::Quantity res = validateAndInterpret(tmp, state, path);
             res.setFormat(quantity.getFormat());
             if (state == QValidator::Acceptable) {
                 success = true;
@@ -161,7 +160,7 @@ public:
         }
 		return false;
     }
-    Base::Quantity validateAndInterpret(QString& input, int& pos, QValidator::State& state, const App::ObjectIdentifier& path) const
+    Base::Quantity validateAndInterpret(QString& input, QValidator::State& state, const App::ObjectIdentifier& path) const
     {
         Base::Quantity res;
         const double max = this->maximum;
@@ -170,7 +169,7 @@ public:
         QString copy = input;
 		double value = min;
 		bool ok = false;
-		
+
 		if (locale.negativeSign() != QLatin1Char('-'))
 			copy.replace(locale.negativeSign(), QLatin1Char('-'));
 		if (locale.positiveSign() != QLatin1Char('+'))
@@ -397,11 +396,10 @@ void QuantitySpinBox::validateInput()
 {
     Q_D(QuantitySpinBox);
 
-    int pos = 0;
     QValidator::State state;
     QString text = lineEdit()->text();
 	const App::ObjectIdentifier & path = getPath();
-    d->validateAndInterpret(text, pos, state, path);
+    d->validateAndInterpret(text, state, path);
     if (state != QValidator::Acceptable) {
         lineEdit()->setText(d->validStr);
     }
@@ -908,25 +906,24 @@ Base::Quantity QuantitySpinBox::valueFromText(const QString &text) const
     Q_D(const QuantitySpinBox);
 
     QString copy = text;
-    int pos = lineEdit()->cursorPosition();
     QValidator::State state = QValidator::Acceptable;
 	const App::ObjectIdentifier & path = getPath();
-    Base::Quantity quant = d->validateAndInterpret(copy, pos, state, path);
+    Base::Quantity quant = d->validateAndInterpret(copy, state, path);
     if (state != QValidator::Acceptable) {
         fixup(copy);
-        quant = d->validateAndInterpret(copy, pos, state, path);
+        quant = d->validateAndInterpret(copy, state, path);
     }
 
     return quant;
 }
 
-QValidator::State QuantitySpinBox::validate(QString &text, int &pos) const
+QValidator::State QuantitySpinBox::validate(QString &text) const
 {
     Q_D(const QuantitySpinBox);
 
     QValidator::State state;
 	const App::ObjectIdentifier & path = getPath();
-    d->validateAndInterpret(text, pos, state, path);
+    d->validateAndInterpret(text, state, path);
     return state;
 }
 
