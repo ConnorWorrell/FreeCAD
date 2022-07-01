@@ -50,7 +50,6 @@
 #include "Command.h"
 #include "DlgExpressionInput.h"
 #include "Tools.h"
-#include <App/DocumentObject.h>
 
 using namespace Gui;
 using namespace App;
