@@ -516,8 +516,8 @@ void QuantitySpinBox::updateFromCache(bool notify, bool updateUnit /* = true */)
         // signaling
         if (notify) {
             d->pendingEmit = false;
-            valueChanged(res);
-            valueChanged(res.getValue());
+            Q_EMIT valueChanged(res);
+            Q_EMIT valueChanged(res.getValue());
             textChanged(text);
         }
     }
@@ -873,7 +873,7 @@ void QuantitySpinBox::selectNumber()
     QChar g = locale().groupSeparator();
     QChar n = locale().negativeSign();
 
-    for (QString::iterator it = str.begin(); it != str.end(); ++it) {
+    for (QString::const_iterator it = str.cbegin(); it != str.cend(); ++it) {
         if (it->isDigit())
             i++;
         else if (*it == d)
