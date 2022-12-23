@@ -154,6 +154,151 @@ QString DrawSVGTemplate::processTemplate()
 			tspan.appendChild(templateDocument.createTextNode(QString::fromUtf8(item->second.c_str())));
 		}
 	}
+    
+    //Add font-family if not present
+	query.setQuery(QString::fromUtf8(
+		"declare default element namespace \"" SVG_NS_URI "\"; "
+		"//text[@*]"));
+
+	QRegExp fontFamilyRX(QString::fromUtf8("(?:font-family:)(.*)(?:;)"));
+	QRegExp fontStretchRX(QString::fromUtf8("(?:font-stretch:)(.*)(?:;)"));
+	QRegExp fontWeightRX(QString::fromUtf8("(?:font-weight:)(.*)(?:;)"));
+	QRegExp fontSpecRX(QString::fromUtf8("(?:-inkscape-font-specification:)(.*)(?:;)"));
+	QRegExp fontSizeRX(QString::fromUtf8("(?:font-size:)(.*)(?:;)"));
+	QRegExp fontStyleRX(QString::fromUtf8("(?:font-style:)(.*)(?:;)"));
+	fontFamilyRX.setMinimal(true);
+	fontStretchRX.setMinimal(true);
+	fontWeightRX.setMinimal(true);
+	fontSpecRX.setMinimal(true);
+	fontSizeRX.setMinimal(true);
+	fontStyleRX.setMinimal(true);
+
+	query.evaluateTo(&queryResult);
+	while (!queryResult.next().isNull())
+	{
+		QDomElement textNode = model.toDomNode(queryResult.current().toNodeModelIndex()).toElement();
+		QString textNodeStyle = textNode.toElement().attribute(QString::fromUtf8("style"));
+
+		if (textNodeStyle.isEmpty()) continue;
+
+		QString fontFamily = QString::fromUtf8("");
+		QString fontSpec = QString::fromUtf8("");
+		QString fontStyle = QString::fromUtf8("");
+		QString fontWeight = QString::fromUtf8("");
+		QString fontStretch = QString::fromUtf8("");
+		QString fontSize = QString::fromUtf8("");
+
+		//font Spec
+		if(fontSpecRX.indexIn(textNodeStyle, 0)) {
+			fontSpec = fontSpecRX.cap(1)
+				.replace(fontFamily,QString::fromUtf8(""), Qt::CaseInsensitive)
+				.replace(QString::fromUtf8("-"),QString::fromUtf8(""))
+				.replace(QString::fromUtf8("'"),QString::fromUtf8(""));
+		}
+
+		//font Family
+		if(fontFamilyRX.indexIn(textNodeStyle, 0)){
+			fontFamily = fontFamilyRX.cap(1).replace(QString::fromUtf8("'"), QString::fromUtf8(""));
+		}
+
+		//font Weight
+		if(fontWeightRX.indexIn(textNodeStyle, 0)) {
+			fontWeight = fontWeightRX.cap(1).replace(QString::fromUtf8("-"),QString::fromUtf8(""));
+		}
+
+		//font Stretch
+		if(fontStretchRX.indexIn(textNodeStyle, 0)) {
+			fontStretch = fontStretchRX.cap(1).replace(QString::fromUtf8("-"),QString::fromUtf8(" "));
+		}
+
+		//font Size
+		if(fontSizeRX.indexIn(textNodeStyle, 0)) {
+			fontSize = fontSizeRX.cap(1);
+		}
+
+		//font style
+		fontStyleRX.indexIn(textNodeStyle, 0);
+		fontStyle = fontStyleRX.cap(1).replace(QString::fromUtf8("'"), QString::fromUtf8("")).replace(QString::fromUtf8("\""), QString::fromUtf8(""));
+
+		//Search textNode node for missing information, extract it, and then delete the node.
+		//This fixes the horizontal shift of the text
+		if (!textNode.firstChild().isNull() && !textNode.firstChild().toElement().text().isEmpty()){
+			QDomElement tspanNode = textNode.firstChild().toElement();
+			QDomNode displayTextNode = textNode.firstChild().firstChild();
+
+			QString displayTextNodeStyle = tspanNode.attribute(QString::fromUtf8("style"));
+			if (!displayTextNodeStyle.isEmpty()){
+				if (fontFamily.isEmpty()){
+					fontFamilyRX.indexIn(displayTextNodeStyle, 0);
+					fontFamily = fontFamilyRX.cap(1).replace(QString::fromUtf8("'"), QString::fromUtf8(""));
+				}
+				if (fontWeight.isEmpty()){
+					fontWeightRX.indexIn(displayTextNodeStyle, 0);
+					fontWeight = fontWeightRX.cap(1).replace(QString::fromUtf8("-"),QString::fromUtf8(""));
+				}
+				if (fontStretch.isEmpty()){
+					fontStretchRX.indexIn(displayTextNodeStyle, 0);
+					fontStretch = fontStretchRX.cap(1).replace(QString::fromUtf8("-"),QString::fromUtf8(" "));
+				}
+				if (fontSize.isEmpty()){
+					fontSizeRX.indexIn(displayTextNodeStyle, 0);
+					fontSize = fontSizeRX.cap(1);
+				}
+				if (fontStyle.isEmpty()){
+					fontFamilyRX.indexIn(displayTextNodeStyle, 0);
+					fontStyle = fontStyleRX.cap(1).replace(QString::fromUtf8("'"), QString::fromUtf8("")).replace(QString::fromUtf8("\""), QString::fromUtf8(""));
+				}
+
+			}
+
+			textNode.appendChild(displayTextNode);
+			textNode.removeChild(tspanNode);
+		}
+
+		if(fontSpec.isEmpty() || fontFamily.isEmpty() || fontStretch.isEmpty()) continue;
+
+		//If font weight is a number, we must extract correct text from the fontSpec
+		QString fontWeightForFontFamily = fontWeight;
+		bool success;
+		if (fontWeight.toInt(&success, 10) && success){
+			fontWeightForFontFamily = fontSpec
+				.replace(fontFamily, QString::fromUtf8("")).replace(QString::fromUtf8(" "), QString::fromUtf8(""), Qt::CaseInsensitive)
+				.replace(fontStretch, QString::fromUtf8("")).replace(QString::fromUtf8(" "), QString::fromUtf8(""), Qt::CaseInsensitive);
+		}
+		if (fontStretch.toLower() == QString::fromUtf8("normal")){
+			fontStretch = QString::fromUtf8("");
+		}
+
+		QString tempfontStretch = fontStretch;
+		fontWeightForFontFamily = fontWeightForFontFamily.toLower().replace(fontStyle, QString::fromUtf8("")).replace(QString::fromUtf8(" "), QString::fromUtf8(""), Qt::CaseInsensitive)
+			.replace(tempfontStretch.replace(QString::fromUtf8(" "), QString::fromUtf8("")), QString::fromUtf8("")).replace(QString::fromUtf8(" "), QString::fromUtf8(""), Qt::CaseInsensitive)
+			.replace(QString::fromUtf8("Heavy"),QString::fromUtf8("Black"), Qt::CaseInsensitive)
+			.replace(QString::fromUtf8("Ultra"),QString::fromUtf8("Extra"), Qt::CaseInsensitive);
+
+		//Remove bold from font family if font stretch is not defined, in this case it is defined in font-weight attribute.
+		if (fontWeightForFontFamily.toLower() == QString::fromUtf8("normal") || (fontStretch.isEmpty() && fontWeight == QString::fromUtf8("bold"))){
+			fontWeightForFontFamily = QString::fromUtf8("");
+		}
+
+		//Build fontfamily string
+		QString exportFontFamily = QString::fromUtf8("");
+		if (!fontFamily.isEmpty()){
+			exportFontFamily.append(fontFamily);
+		}
+		if (!fontStretch.isEmpty()){
+			exportFontFamily.append(QString::fromUtf8(" "));
+			exportFontFamily.append(fontStretch);
+		}
+		if (!fontWeightForFontFamily.isEmpty()){
+			exportFontFamily.append(QString::fromUtf8(" "));
+			exportFontFamily.append(fontWeightForFontFamily);
+		}
+
+		if (!exportFontFamily.isEmpty()) textNode.setAttribute(QString::fromUtf8("font-family"), exportFontFamily);
+		if (!fontWeight.isEmpty()) textNode.setAttribute(QString::fromUtf8("font-weight"), fontWeight);
+		if (!fontStyle.isEmpty()) textNode.setAttribute(QString::fromUtf8("font-style"), fontStyle);
+		if (!fontSize.isEmpty()) textNode.setAttribute(QString::fromUtf8("font-size"), fontSize);
+	}
 
 	// Calculate the dimensions of the page and store for retrieval
 	// Obtain the size of the SVG document by reading the document attributes
