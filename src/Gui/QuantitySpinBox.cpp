@@ -163,7 +163,7 @@ public:
         double value = min;
         bool ok = false;
 
-        QChar space = QLatin1Char(' '), period = QLatin1Char ('.'), plus = QLatin1Char('+'), minus = QLatin1Char('-'), division = QLatin1Char('/'), multiply = QLatin1Char('*'), exp = QLatin1Char('^'), par = QLatin1Char('(');
+        QChar plus = QLatin1Char('+'), minus = QLatin1Char('-');
 
         if (locale.negativeSign() != minus)
             copy.replace(locale.negativeSign(), minus);
@@ -171,34 +171,44 @@ public:
             copy.replace(locale.positiveSign(), plus);
 
         //Prep for expression parser
-        unsigned int length = copy.length(), shift;
-        bool noUnit = false;
-        for (unsigned int pos=0; pos < length; pos++) {
-            QChar num = copy[pos];
-            if (num == division || num == multiply || num == exp || num == par){
-                break; // Stop if anything odd happens
-            }
-            else if (num.isNumber()) {
-                noUnit = true;
-            }
-            else if (num != space && num != period && num != plus && num != minus) {
-                noUnit = false;
+        //This regex matches chunks between +,-,$,^ accounting for matching parenthesis.
+        QRegularExpression chunkRe(QString::fromUtf8("(?<=^|[\\+\\-])((\\((?>[^()]|(?2))*\\))|[\\/\\*\\^ A-Za-z0-9.])*(?=$|[\\+\\-])"));
+        QRegularExpressionMatchIterator expressionChunk = chunkRe.globalMatch(copy);
+        unsigned int lengthOffset = 0;
+        nextExpression:
+        while (expressionChunk.hasNext()) {
+            QRegularExpressionMatch matchChunk = expressionChunk.next();
+            QString origionalChunk = matchChunk.captured(0);
+            QString copyChunk = origionalChunk;
+
+            //Match units: any set of characters, or " or '
+            QRegularExpression unitsRe(QString::fromUtf8("([a-zA-Z]+|\"|\')"));
+            QRegularExpressionMatchIterator unitsChunk = unitsRe.globalMatch(matchChunk.captured(0));
+            QString units = QString::fromUtf8("");
+            while (unitsChunk.hasNext()) {
+                QRegularExpressionMatch matchUnits = unitsChunk.next();
+                if (units.isEmpty()){
+                    units = matchUnits.captured(0);
+                }
+                if (units != matchUnits.captured(0)) goto nextExpression; //Multiple units in chunk, don't edit.
             }
 
-            if (noUnit
-                && (num == plus ||                       // 1+  -> 1mm+
-                    num == minus ||                      // 1-  -> 1mm-
-                    (pos == length - 1 && (pos += 1)))) {// 1EOL-> 1mmEOL
-                copy.insert(pos, unitStr);
-                pos += shift = unitStr.length();
-                length += shift;
-                noUnit = false;
+            if (units.isEmpty()){ //If no units are found, use default units
+                units = unitStr;
             }
+
+            while (copyChunk.contains(units)){ // Remove units from chunk
+                copyChunk.replace(units,QString::fromUtf8(""));
+            }
+            copyChunk.append(QString::fromUtf8("*(1")+units+QString::fromUtf8(")")); // Add units to the end of chunk *(1unit)
+            copy.replace(matchChunk.capturedStart() + lengthOffset, 
+                    matchChunk.capturedEnd() - matchChunk.capturedStart(), copyChunk);
+            lengthOffset += copyChunk.length() - origionalChunk.length(); 
         }
 
         ok = parseString(copy, res, value, path);
 
-        // If result has not unit: add default unit
+        // If result does not have unit: add default unit
         if (res.getUnit().isEmpty()){
             res.setUnit(unit);
         }
