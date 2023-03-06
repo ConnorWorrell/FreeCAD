@@ -197,7 +197,7 @@ public:
                 units = unitStr;
             }
 
-            while (copyChunk.contains(units)){ // Remove units from chunk
+            if (copyChunk.contains(units)){ // Remove units from chunk
                 copyChunk.replace(units,QString::fromUtf8(""));
             }
             copyChunk.append(QString::fromUtf8("*(1")+units+QString::fromUtf8(")")); // Add units to the end of chunk *(1unit)
