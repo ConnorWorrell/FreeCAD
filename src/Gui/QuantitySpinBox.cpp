@@ -164,6 +164,7 @@ public:
         bool ok = false;
 
         QChar plus = QLatin1Char('+'), minus = QLatin1Char('-');
+        QString eString = QString::fromUtf8("e"), piString = QString::fromUtf8("pi");
 
         if (locale.negativeSign() != minus)
             copy.replace(locale.negativeSign(), minus);
@@ -187,10 +188,15 @@ public:
             QString units = QString::fromUtf8("");
             while (unitsChunk.hasNext()) {
                 QRegularExpressionMatch matchUnits = unitsChunk.next();
+                QString detectedUnits = matchUnits.captured(0);
+
+                // Exclude e and pi from unit selection
+                if (detectedUnits.toLower() == eString || detectedUnits.toLower() == piString) continue;
+
                 if (units.isEmpty()){
-                    units = matchUnits.captured(0);
+                    units = detectedUnits;
                 }
-                if (units != matchUnits.captured(0)) goto nextExpression; //Multiple units in chunk, don't edit.
+                if (units != detectedUnits) goto nextExpression; //Multiple units in chunk, don't edit.
             }
 
             if (units.isEmpty()){ //If no units are found, use default units
