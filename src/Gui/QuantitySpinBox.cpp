@@ -153,6 +153,17 @@ public:
         }
         return false;
     }
+    bool detectUnits(const QString& string2Test) const
+    {
+        std::string toIgnore[14] = { "e", "pi", "acos", "asin", "atan",
+            "abs", "exp", "log", "sin", "sinh", "tan", "tanh", "sqrt", "cos" };
+        for (std::string i : toIgnore){
+            if (string2Test.toLower() == QString::fromStdString(i)){
+                return false;
+            }
+        }
+        return true;
+    }
     Base::Quantity validateAndInterpret(QString& input, QValidator::State& state, const App::ObjectIdentifier& path) const
     {
         Base::Quantity res;
@@ -164,7 +175,6 @@ public:
         bool ok = false;
 
         QChar plus = QLatin1Char('+'), minus = QLatin1Char('-');
-        QString eString = QString::fromUtf8("e"), piString = QString::fromUtf8("pi");
 
         if (locale.negativeSign() != minus)
             copy.replace(locale.negativeSign(), minus);
@@ -190,8 +200,8 @@ public:
                 QRegularExpressionMatch matchUnits = unitsChunk.next();
                 QString detectedUnits = matchUnits.captured(0);
 
-                // Exclude e and pi from unit selection
-                if (detectedUnits.toLower() == eString || detectedUnits.toLower() == piString) continue;
+                // Exclude certain strings from unit selection, eg: e, pi, sin, cos
+                if (!detectUnits(detectedUnits)) continue;
 
                 if (units.isEmpty()){
                     units = detectedUnits;
