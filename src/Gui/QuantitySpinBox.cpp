@@ -153,17 +153,6 @@ public:
         }
         return false;
     }
-    bool detectUnits(const QString& string2Test) const
-    {
-        std::string toIgnore[14] = { "e", "pi", "acos", "asin", "atan",
-            "abs", "exp", "log", "sin", "sinh", "tan", "tanh", "sqrt", "cos" };
-        for (std::string i : toIgnore){
-            if (string2Test.toLower() == QString::fromStdString(i)){
-                return false;
-            }
-        }
-        return true;
-    }
     Base::Quantity validateAndInterpret(QString& input, QValidator::State& state, const App::ObjectIdentifier& path) const
     {
         Base::Quantity res;
@@ -186,37 +175,21 @@ public:
         QRegularExpression chunkRe(QString::fromUtf8("(?<=^|[\\+\\-])((\\((?>[^()]|(?2))*\\))|[\\/\\*\\^ A-Za-z0-9.])*(?=$|[\\+\\-])"));
         QRegularExpressionMatchIterator expressionChunk = chunkRe.globalMatch(copy);
         unsigned int lengthOffset = 0;
-        nextExpression:
         while (expressionChunk.hasNext()) {
             QRegularExpressionMatch matchChunk = expressionChunk.next();
             QString origionalChunk = matchChunk.captured(0);
             QString copyChunk = origionalChunk;
 
-            //Match units: any set of characters, or " or '
-            QRegularExpression unitsRe(QString::fromUtf8("([a-zA-Z]+|\"|\')"));
-            QRegularExpressionMatchIterator unitsChunk = unitsRe.globalMatch(matchChunk.captured(0));
-            QString units = QString::fromUtf8("");
-            while (unitsChunk.hasNext()) {
-                QRegularExpressionMatch matchUnits = unitsChunk.next();
-                QString detectedUnits = matchUnits.captured(0);
+            //Find units and replace
+            copyChunk.replace(QRegularExpression(QString::fromUtf8("((?:(?:\\((?>(?:[\\+\\*\\-\\^]?\\ *(?:\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+)|e|pi|acos|asin|atan2|atan|cosh|sinh|tanh|cos|tan|sin|exp|log|log10)+|(?R))*\\)|(?:[\\+\\*\\-\\^]?\\ *(?:\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+)|e|pi|acos|asin|atan2|atan|cosh|sinh|tanh|cos|tan|sin|exp|log|log10)+)+\\ *[\\/\\^]\\ *(?:\\((?>(?:[\\+\\*\\-\\^]?\\ *(?:\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+)|e|pi|acos|asin|atan2|atan|cosh|sinh|tanh|cos|tan|sin|exp|log|log10)+|(?R))*\\)|(?:[\\+\\*\\-\\^]?\\ *(?:\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+)|e|pi|acos|asin|atan2|atan|cosh|sinh|tanh|cos|tan|sin|exp|log|log10)+)+)|\\))(VAs|CV|mil|min|mi|mph|lb[mf]?|°|deg|rad|gon|″|′|[uµm]?Torr|[uµm]?K|[mkM]?A|[pnuµm]?F|C|[uµmkM]?S|[kMGT]?Hz|[nuµm]?H|[mk]?V|[kM]?Ohm|[mk]?J|[kM]?eV|kWh|Ws|k?cal|[mkM]?N|[uµmk]?g|m?l|[nuµmcdk]?m|thou|in|\\\"|'|yd|cd|Wb|T|t|oz|st|cwt|k?W|[kMG]?Pa|[pk]si|h|G|M|cft|sqft|ft|s)")), QString::fromUtf8("\\1*(1\\2)"));
 
-                // Exclude certain strings from unit selection, eg: e, pi, sin, cos
-                if (!detectUnits(detectedUnits)) continue;
-
-                if (units.isEmpty()){
-                    units = detectedUnits;
-                }
-                if (units != detectedUnits) goto nextExpression; //Multiple units in chunk, don't edit.
+            //Add default units to string if none are present
+            QRegularExpression unitsRe(QString::fromUtf8("VAs|CV|mil|min|mi|mph|lb[mf]?|°|deg|rad|gon|″|′|[uµm]?Torr|[uµm]?K|[mkM]?A|[pnuµm]?F|C|[uµmkM]?S|[kMGT]?Hz|[nuµm]?H|[mk]?V|[kM]?Ohm|[mk]?J|[kM]?eV|kWh|Ws|k?cal|[mkM]?N|[uµmk]?g|m?l|[nuµmcdk]?m|thou|in|\"|'|yd|cd|Wb|T|t|oz|st|cwt|k?W|[kMG]?Pa|[pk]si|h|G|M|cft|sqft|ft|s"));
+            QRegularExpressionMatch match = unitsRe.match(copyChunk);
+            if (!match.hasMatch() && !copyChunk.isEmpty()){ //If no units are found, use default units
+                copyChunk.append(QString::fromUtf8("*(1")+unitStr+QString::fromUtf8(")")); // Add units to the end of chunk *(1unit)
             }
 
-            if (units.isEmpty()){ //If no units are found, use default units
-                units = unitStr;
-            }
-
-            if (copyChunk.contains(units)){ // Remove units from chunk
-                copyChunk.replace(units,QString::fromUtf8(""));
-            }
-            copyChunk.append(QString::fromUtf8("*(1")+units+QString::fromUtf8(")")); // Add units to the end of chunk *(1unit)
             copy.replace(matchChunk.capturedStart() + lengthOffset, 
                     matchChunk.capturedEnd() - matchChunk.capturedStart(), copyChunk);
             lengthOffset += copyChunk.length() - origionalChunk.length(); 
