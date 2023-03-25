@@ -190,9 +190,9 @@ public:
                 copyChunk.append(QString::fromUtf8("*(1")+unitStr+QString::fromUtf8(")")); // Add units to the end of chunk *(1unit)
             }
 
-            copy.replace(matchChunk.capturedStart() + lengthOffset, 
+            copy.replace(matchChunk.capturedStart() + lengthOffset,
                     matchChunk.capturedEnd() - matchChunk.capturedStart(), copyChunk);
-            lengthOffset += copyChunk.length() - origionalChunk.length(); 
+            lengthOffset += copyChunk.length() - origionalChunk.length();
         }
 
         ok = parseString(copy, res, value, path);
