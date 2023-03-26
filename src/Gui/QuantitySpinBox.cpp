@@ -172,7 +172,7 @@ public:
 
         //Prep for expression parser
         //This regex matches chunks between +,-,$,^ accounting for matching parenthesis.
-        QRegularExpression chunkRe(QString::fromUtf8("(?<=^|[\\+\\-])((\\((?>[^()]|(?2))*\\))|[\\/\\*\\^ A-Za-z0-9.])*(?=$|[\\+\\-])"));
+        QRegularExpression chunkRe(QString::fromUtf8("(?<=^|[\\+\\-])((\\((?>[^()]|(?2))*\\))|[^\\+\\-\n])*(?=$|[\\+\\-])"));
         QRegularExpressionMatchIterator expressionChunk = chunkRe.globalMatch(copy);
         unsigned int lengthOffset = 0;
         while (expressionChunk.hasNext()) {
@@ -181,7 +181,7 @@ public:
             QString copyChunk = origionalChunk;
 
             //Find units and replace
-            copyChunk.replace(QRegularExpression(QString::fromUtf8("((?:(?:\\((?>(?:[\\+\\*\\-\\^]?\\ *(?:\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+)|e|pi|acos|asin|atan2|atan|cosh|sinh|tanh|cos|tan|sin|exp|log|log10)+|(?R))*\\)|(?:[\\+\\*\\-\\^]?\\ *(?:\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+)|e|pi|acos|asin|atan2|atan|cosh|sinh|tanh|cos|tan|sin|exp|log|log10)+)+\\ *[\\/\\^]\\ *(?:\\((?>(?:[\\+\\*\\-\\^]?\\ *(?:\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+)|e|pi|acos|asin|atan2|atan|cosh|sinh|tanh|cos|tan|sin|exp|log|log10)+|(?R))*\\)|(?:[\\+\\*\\-\\^]?\\ *(?:\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+)|e|pi|acos|asin|atan2|atan|cosh|sinh|tanh|cos|tan|sin|exp|log|log10)+)+)|\\)\\ *)(VAs|CV|mil|min|mi|mph|lb[mf]?|°|deg|rad|gon|″|′|[uµm]?Torr|[uµm]?K|[mkM]?A|[pnuµm]?F|C|[uµmkM]?S|[kMGT]?Hz|[nuµm]?H|[mk]?V|[kM]?Ohm|[mk]?J|[kM]?eV|kWh|Ws|k?cal|[mkM]?N|[uµmk]?g|m?l|[nuµmcdk]?m|thou|in|\\\"|'|yd|cd|Wb|T|t|oz|st|cwt|k?W|[kMG]?Pa|[pk]si|h|G|M|cft|sqft|ft|s)")), QString::fromUtf8("\\1*(1\\2)"));
+            copyChunk.replace(QRegularExpression(QString::fromUtf8("((?:(?:\\((?>(?:[\\+\\*\\-\\^]?\\ *(?:\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+)|e|pi|acos|asin|atan2|atan|cosh|sinh|tanh|cos|tan|sin|exp|log|log10)+|(?R))*\\)|(?:[\\+\\*\\-\\^]?\\ *(?:\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+)|e|pi|acos|asin|atan2|atan|cosh|sinh|tanh|cos|tan|sin|exp|log|log10)+)+\\ *[\\/\\^]\\ *(?:\\((?>(?:[\\+\\*\\-\\^]?\\ *(?:\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+)|e|pi|acos|asin|atan2|atan|cosh|sinh|tanh|cos|tan|sin|exp|log|log10)+|(?R))*\\)|(?:[\\+\\*\\-\\^]?\\ *(?:\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+)|e|pi|acos|asin|atan2|atan|cosh|sinh|tanh|cos|tan|sin|exp|log|log10)+)+)|\\)\\ *)(VAs|CV|mil|min|mi|mph|lb[mf]?|°|deg|rad|gon|″|′|[uµm]?Torr|[uµm]?K|[mkM]?A|[pnuµm]?F|C|[uµmkM]?S|[kMGT]?Hz|[nuµm]?H|[mk]?V|[kM]?Ohm|[mk]?J|[kM]?eV|kWh|Ws|k?cal|[mkM]?N|[uµmk]?g|m?l|[nuµmcdk]?m|thou|in|\"|'|yd|cd|Wb|T|t|oz|st|cwt|k?W|[kMG]?Pa|[pk]si|h|G|M|cft|sqft|ft|s)")), QString::fromUtf8("\\1*(1\\2)"));
 
             //Add default units to string if none are present
             QRegularExpression unitsRe(QString::fromUtf8("VAs|CV|mil|min|mi|mph|lb[mf]?|°|deg|rad|gon|″|′|[uµm]?Torr|[uµm]?K|[mkM]?A|[pnuµm]?F|C|[uµmkM]?S|[kMGT]?Hz|[nuµm]?H|[mk]?V|[kM]?Ohm|[mk]?J|[kM]?eV|kWh|Ws|k?cal|[mkM]?N|[uµmk]?g|m?l|[nuµmcdk]?m|thou|in|\"|'|yd|cd|Wb|T|t|oz|st|cwt|k?W|[kMG]?Pa|[pk]si|h|G|M|cft|sqft|ft|s"));
