@@ -179,12 +179,14 @@ public:
             QRegularExpressionMatch matchChunk = expressionChunk.next();
             QString origionalChunk = matchChunk.captured(0);
             QString copyChunk = origionalChunk;
+            std::reverse(copyChunk.begin(), copyChunk.end());
 
-            //Find units and replace
-            copyChunk.replace(QRegularExpression(QString::fromUtf8("((?:(?:\\((?>(?:[\\+\\*\\-\\^]?\\ *(?:\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+)|e|pi|acos|asin|atan2|atan|cosh|sinh|tanh|cos|tan|sin|exp|log|log10)+|(?R))*\\)|(?:[\\+\\*\\-\\^]?\\ *(?:\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+)|e|pi|acos|asin|atan2|atan|cosh|sinh|tanh|cos|tan|sin|exp|log|log10)+)+\\ *[\\/\\^]\\ *(?:\\((?>(?:[\\+\\*\\-\\^]?\\ *(?:\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+)|e|pi|acos|asin|atan2|atan|cosh|sinh|tanh|cos|tan|sin|exp|log|log10)+|(?R))*\\)|(?:[\\+\\*\\-\\^]?\\ *(?:\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+)|e|pi|acos|asin|atan2|atan|cosh|sinh|tanh|cos|tan|sin|exp|log|log10)+)+)|\\)\\ *)(VAs|CV|mil|min|mi|mph|lb[mf]?|°|deg|rad|gon|″|′|[uµm]?Torr|[uµm]?K|[mkM]?A|[pnuµm]?F|C|[uµmkM]?S|[kMGT]?Hz|[nuµm]?H|[mk]?V|[kM]?Ohm|[mk]?J|[kM]?eV|kWh|Ws|k?cal|[mkM]?N|[uµmk]?g|m?l|[nuµmcdk]?m|thou|in|\"|'|yd|cd|Wb|T|t|oz|st|cwt|k?W|[kMG]?Pa|[pk]si|h|G|M|cft|sqft|ft|s)")), QString::fromUtf8("\\1*(1\\2)"));
+            //Find units and replace 1/2mm -> 1/2*(1mm), 1^2mm -> 1^2*(1mm)
+            copyChunk.replace(QRegularExpression(QString::fromUtf8("(sAV|VC|lim|nim|im|hpm|[mf]?bl|°|ged|dar|nog|″|′|rroT[uµm]?|K[uµm]?|A[mkM]?|F[pnuµm]?|C|S[uµmkM]?|zH[kMGT]?|H[nuµm]?|mhO[kM]?|J[mk]?|Ve[kM]?|V[mk]?|hWk|sW|lack?|N[mkM]?|g[uµmk]?|lm?|(?<=\\b|[^a-zA-Z])m[nuµmcdk]?|uoht|ni|\"|'|dy|dc|bW|T|t|zo|ts|twc|Wk?|aP[kMG]?|is[pk]|h|G|M|tfc|tfqs|tf|s)(\\)|(?:\\*|(?:\\)(?:(?:\\ *(?:e|ip|lomm|lom|\\)(?:[^()]|(?R))*\\((?:soca|nisa|2nata|nata|hsoc|hnis|hnat|soc|nat|nis|pex|gol|01gol)|\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+))|(?R))*\\(|(?:\\ *(?:e|ip|lomm|lom|\\)(?:[^()]|(?R))*\\((?:soca|nisa|2nata|nata|hsoc|hnis|hnat|soc|nat|nis|pex|gol|01gol)|\\d+\\ *\\.?\\ *\\d*|\\.\\ *\\d+))))+[\\/\\^](?!(sAV|VC|lim|nim|im|hpm|[mf]?bl|°|ged|dar|nog|″|′|rroT[uµm]?|K[uµm]?|A[mkM]?|F[pnuµm]?|C|S[uµmkM]?|zH[kMGT]?|H[nuµm]?|mhO[kM]?|J[mk]?|Ve[kM]?|V[mk]?|hWk|sW|lack?|N[mkM]?|g[uµmk]?|lm?|(?<=\\b|[^a-zA-Z])m[nuµmcdk]?|uoht|ni|\"|'|dy|dc|bW|T|t|zo|ts|twc|Wk?|aP[kMG]?|is[pk]|h|G|M|tfc|tfqs|tf|s)))")), QString::fromUtf8(")\\11(*\\2"));
+            std::reverse(copyChunk.begin(), copyChunk.end());
 
             //Add default units to string if none are present
-            QRegularExpression unitsRe(QString::fromUtf8("VAs|CV|mil|min|mi|mph|lb[mf]?|°|deg|rad|gon|″|′|[uµm]?Torr|[uµm]?K|[mkM]?A|[pnuµm]?F|C|[uµmkM]?S|[kMGT]?Hz|[nuµm]?H|[mk]?V|[kM]?Ohm|[mk]?J|[kM]?eV|kWh|Ws|k?cal|[mkM]?N|[uµmk]?g|m?l|[nuµmcdk]?m|thou|in|\"|'|yd|cd|Wb|T|t|oz|st|cwt|k?W|[kMG]?Pa|[pk]si|h|G|M|cft|sqft|ft|s"));
+            QRegularExpression unitsRe(QString::fromUtf8("(?<=\\b|[^a-zA-Z])(VAs|CV|mil|min|mi|mph|lb[mf]?|deg|rad|gon|[uµm]?Torr|[uµm]?K|[mkM]?A|[pnuµm]?F|C|[uµmkM]?S|[kMGT]?Hz|[nuµm]?H|[mk]?V|[kM]?Ohm|[mk]?J|[kM]?eV|kWh|Ws|k?cal|[mkM]?N|[uµmk]?g|m?l|[nuµmcdk]?m|thou|in|yd|cd|Wb|T|t|oz|st|cwt|k?W|[kMG]?Pa|[pk]si|h|G|M|cft|sqft|ft|s)(?=\\b|[^a-zA-Z])|°|″|′|\"|'"));
             QRegularExpressionMatch match = unitsRe.match(copyChunk);
             if (!match.hasMatch() && !copyChunk.isEmpty()){ //If no units are found, use default units
                 copyChunk.append(QString::fromUtf8("*(1")+unitStr+QString::fromUtf8(")")); // Add units to the end of chunk *(1unit)
