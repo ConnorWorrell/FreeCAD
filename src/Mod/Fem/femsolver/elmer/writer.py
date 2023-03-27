@@ -48,6 +48,7 @@ from femmesh import gmshtools
 from femtools import constants
 from femtools import femutils
 from femtools import membertools
+from .equations import deformation_writer as DEF_writer
 from .equations import elasticity_writer as EL_writer
 from .equations import electricforce_writer as EF_writer
 from .equations import electrostatic_writer as ES_writer
@@ -94,6 +95,7 @@ class Writer(object):
     def write_solver_input(self):
         self._handleRedifinedConstants()
         self._handleSimulation()
+        self._handleDeformation()
         self._handleElasticity()
         self._handleElectricforce()
         self._handleElectrostatic()
@@ -324,14 +326,11 @@ class Writer(object):
         for equation in self.solver.Group:
             if femutils.is_of_type(equation, "Fem::EquationElmerHeat"):
                 hasHeat = True
-        if hasHeat:
-            self._simulation("BDF Order", self.solver.BDFOrder)
         self._simulation("Coordinate System", self.solver.CoordinateSystem)
         self._simulation("Coordinate Mapping", (1, 2, 3))
         # Elmer uses SI base units, but our mesh is in mm, therefore we must tell
         # the solver that we have another scale
         self._simulation("Coordinate Scaling", 0.001)
-        self._simulation("Output Intervals", 1)
         self._simulation("Simulation Type", self.solver.SimulationType)
         if self.solver.SimulationType == "Steady State":
             self._simulation(
@@ -346,11 +345,10 @@ class Writer(object):
             self.solver.SimulationType == "Scanning"
             or self.solver.SimulationType == "Transient"
         ):
+            self._simulation("BDF Order", self.solver.BDFOrder)
+            self._simulation("Output Intervals", self.solver.OutputIntervals)
             self._simulation("Timestep Intervals", self.solver.TimestepIntervals)
-            self._simulation("Timestep Sizes", self.solver.TimestepSizes)
-            # Output Intervals must be equal to Timestep Intervals
-            self._simulation("Output Intervals", self.solver.TimestepIntervals)
-        if hasHeat:
+            self._simulation("Timestep Sizes", self.solver.TimestepSizes) 
             self._simulation("Timestepping Method", "BDF")
         self._simulation("Use Mesh Names", True)
 
@@ -364,7 +362,7 @@ class Writer(object):
                 ""
             )
             solver.CoordinateSystem = solverClass.COORDINATE_SYSTEM
-            solver.CoordinateSystem = "Cartesian 3D"
+            solver.CoordinateSystem = "Cartesian"
         if not hasattr(self.solver, "BDFOrder"):
             solver.addProperty(
                 "App::PropertyIntegerConstraint",
@@ -373,6 +371,22 @@ class Writer(object):
                 "Order of time stepping method 'BDF'"
             )
             solver.BDFOrder = (2, 1, 5, 1)
+        if not hasattr(self.solver, "ElmerTimeResults"):
+            solver.addProperty(
+                "App::PropertyLinkList",
+                "ElmerTimeResults",
+                "Base",
+                "",
+                4 | 8
+            )
+        if not hasattr(self.solver, "OutputIntervals"):
+            solver.addProperty(
+                "App::PropertyIntegerList",
+                "OutputIntervals",
+                "Timestepping",
+                "After how many time steps a result file is output"
+            )
+            solver.OutputIntervals = [1]
         if not hasattr(self.solver, "SimulationType"):
             solver.addProperty(
                 "App::PropertyEnumeration",
@@ -406,10 +420,38 @@ class Writer(object):
             solver.TimestepSizes = [0.1]
 
     #-------------------------------------------------------------------------------------------
+    # Deformation
+
+    def _handleDeformation(self):
+        DEFW = DEF_writer.DeformationWriter(self, self.solver)
+        activeIn = []
+        for equation in self.solver.Group:
+            if femutils.is_of_type(equation, "Fem::EquationElmerDeformation"):
+                if not self._haveMaterialSolid():
+                    raise WriteError(
+                        "The Deformation equation requires at least one body with a solid material!"
+                    )
+                if equation.References:
+                    activeIn = equation.References[0][1]
+                else:
+                    activeIn = self.getAllBodies()
+                solverSection = DEFW.getDeformationSolver(equation)
+                for body in activeIn:
+                    if not self.isBodyMaterialFluid(body):
+                        self._addSolver(body, solverSection)
+                        DEFW.handleDeformationEquation(activeIn, equation)
+        if activeIn:
+            DEFW.handleDeformationConstants()
+            DEFW.handleDeformationBndConditions()
+            DEFW.handleDeformationInitial(activeIn)
+            DEFW.handleDeformationBodyForces(activeIn)
+            DEFW.handleDeformationMaterial(activeIn)
+
+    #-------------------------------------------------------------------------------------------
     # Elasticity
 
     def _handleElasticity(self):
-        ELW = EL_writer.Elasticitywriter(self, self.solver)
+        ELW = EL_writer.ElasticityWriter(self, self.solver)
         activeIn = []
         for equation in self.solver.Group:
             if femutils.is_of_type(equation, "Fem::EquationElmerElasticity"):
@@ -702,8 +744,8 @@ class Writer(object):
     def _haveMaterialFluid(self):
         for obj in self.getMember("App::MaterialObject"):
             m = obj.Material
-            # fluid material always has KinematicViscosity defined
-            if "KinematicViscosity" in m:
+            # fluid material always has a viscosity defined
+            if ("DynamicViscosity" in m) or ("KinematicViscosity" in m):
                 return True
         return False
 
@@ -712,7 +754,7 @@ class Writer(object):
         # then assume it is a solid
         if self.getBodyMaterial(body) is not None:
             m = self.getBodyMaterial(body).Material
-            return "KinematicViscosity" in m
+            return ("DynamicViscosity" in m) or ("KinematicViscosity" in m)
         return False
 
     def getBodyMaterial(self, name):
@@ -779,10 +821,19 @@ class Writer(object):
         # To get it back in the original size we let Elmer scale it back
         s["Coordinate Scaling Revert"] = True
         s["Equation"] = "ResultOutput"
-        s["Exec Solver"] = "After simulation"
+        if (
+            self.solver.SimulationType == "Scanning"
+            or self.solver.SimulationType == "Transient"
+        ):
+            # we must execute the post solver every time we output a result
+            # therefore we must use the same as self.solver.OutputIntervals
+            s["Exec Intervals"] = self.solver.OutputIntervals
+        else:
+            s["Exec Solver"] = "After simulation"
         s["Procedure"] = sifio.FileAttr("ResultOutputSolve/ResultOutputSolver")
-        s["Output File Name"] = sifio.FileAttr("case")
+        s["Output File Name"] = sifio.FileAttr("FreeCAD")
         s["Vtu Format"] = True
+        s["Vtu Time Collection"] = True
         if self.unit_schema == Units.Scheme.SI2:
             s["Coordinate Scaling Revert"] = True
             Console.PrintMessage(

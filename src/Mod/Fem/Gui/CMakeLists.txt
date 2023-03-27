@@ -91,16 +91,18 @@ set(FemGui_UIC_SRCS
 if(BUILD_FEM_VTK)
     set(FemGui_UIC_SRCS
         ${FemGui_UIC_SRCS}
-        TaskPostDisplay.ui
-        TaskPostClip.ui
-        TaskPostContours.ui
-        TaskPostDataAlongLine.ui
-        TaskPostDataAtPoint.ui
-        TaskPostScalarClip.ui
-        TaskPostWarpVector.ui
-        TaskPostCut.ui
+        BoxWidget.ui
+        CylinderWidget.ui
         PlaneWidget.ui
         SphereWidget.ui
+        TaskPostClip.ui
+        TaskPostContours.ui
+        TaskPostCut.ui
+        TaskPostDataAlongLine.ui
+        TaskPostDataAtPoint.ui
+        TaskPostDisplay.ui
+        TaskPostScalarClip.ui
+        TaskPostWarpVector.ui
     )
 endif(BUILD_FEM_VTK)
 
@@ -269,18 +271,20 @@ SET(FemGui_SRCS_TaskBoxes
 if(BUILD_FEM_VTK)
     SET(FemGui_SRCS_TaskBoxes
         ${FemGui_SRCS_TaskBoxes}
+        BoxWidget.ui
+        CylinderWidget.ui
         PlaneWidget.ui
         SphereWidget.ui
-        TaskPostClip.ui
-        TaskPostContours.ui
-        TaskPostDataAlongLine.ui
-        TaskPostDataAtPoint.ui
-        TaskPostScalarClip.ui
-        TaskPostDisplay.ui
-        TaskPostWarpVector.ui
-        TaskPostCut.ui
         TaskPostBoxes.h
         TaskPostBoxes.cpp
+        TaskPostClip.ui
+        TaskPostContours.ui
+        TaskPostCut.ui
+        TaskPostDataAlongLine.ui
+        TaskPostDataAtPoint.ui
+        TaskPostDisplay.ui
+        TaskPostScalarClip.ui
+        TaskPostWarpVector.ui
     )
 endif(BUILD_FEM_VTK)
 SOURCE_GROUP("Task_Boxes" FILES ${FemGui_SRCS_TaskBoxes})
@@ -356,12 +360,6 @@ SET(FemGuiIcon_SVG
 
 add_library(FemGui SHARED ${FemGui_SRCS} ${FemGuiIcon_SVG})
 target_link_libraries(FemGui ${FemGui_LIBS} ${VTK_LIBRARIES})
-
-# external SMESH doesn't support C++17 yet
-if(FREECAD_USE_EXTERNAL_SMESH)
-    set_target_properties(FemGui PROPERTIES CXX_STANDARD_REQUIRED ON)
-    set_target_properties(FemGui PROPERTIES CXX_STANDARD 14)
-endif()
 
 
 fc_copy_sources(FemGui "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Fem" ${FemGuiIcon_SVG})

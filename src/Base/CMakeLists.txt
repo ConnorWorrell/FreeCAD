@@ -61,6 +61,7 @@ include_directories(
 )
 list(APPEND FreeCADBase_LIBS ${QtCore_LIBRARIES})
 
+list(APPEND FreeCADBase_LIBS fmt::fmt)
 
 if (BUILD_DYNAMIC_LINK_PYTHON)
     list(APPEND FreeCADBase_LIBS ${PYTHON_LIBRARIES})
@@ -230,6 +231,7 @@ SET(FreeCADBase_CPP_SRCS
     MatrixPyImp.cpp
     MemDebug.cpp
     Mutex.cpp
+    Observer.cpp
     Parameter.xsd
     Parameter.cpp
     ParameterPy.cpp

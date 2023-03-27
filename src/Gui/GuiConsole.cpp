@@ -81,8 +81,10 @@ GUIConsole::~GUIConsole (void)
       FreeConsole();
 }
 
-void GUIConsole::SendLog(const std::string& msg, Base::LogStyle level)
+void GUIConsole::SendLog(const std::string& notifiername, const std::string& msg, Base::LogStyle level)
 {
+    (void) notifiername;
+
     int color = -1;
     switch(level){
         case Base::LogStyle::Warning:
@@ -97,6 +99,11 @@ void GUIConsole::SendLog(const std::string& msg, Base::LogStyle level)
         case Base::LogStyle::Log:
             color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
             break;
+        case Base::LogStyle::Critical:
+            color = FOREGROUND_RED | FOREGROUND_GREEN;
+            break;
+        default:
+            break;
     }
 
     ::SetConsoleTextAttribute(::GetStdHandle(STD_OUTPUT_HANDLE), color);
@@ -109,8 +116,10 @@ void GUIConsole::SendLog(const std::string& msg, Base::LogStyle level)
 // safely ignore GUIConsole::s_nMaxLines and  GUIConsole::s_nRefCount
 GUIConsole::GUIConsole () {}
 GUIConsole::~GUIConsole () {}
-void GUIConsole::SendLog(const std::string& msg, Base::LogStyle level)
+void GUIConsole::SendLog(const std::string& notifiername, const std::string& msg, Base::LogStyle level)
 {
+    (void) notifiername;
+
     switch(level){
         case Base::LogStyle::Warning:
             std::cerr << "Warning: " << msg;
@@ -123,6 +132,11 @@ void GUIConsole::SendLog(const std::string& msg, Base::LogStyle level)
             break;
         case Base::LogStyle::Log:
             std::clog << msg;
+            break;
+        case Base::LogStyle::Critical:
+            std::cout << "Critical: " << msg;
+            break;
+        default:
             break;
     }
 }

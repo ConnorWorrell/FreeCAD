@@ -182,6 +182,14 @@ void ToolBarManager::setup(ToolBarItem* toolBarItems)
     static QPointer<QWidget> _ActionWidget;
     if (!_ActionWidget) {
         _ActionWidget = new QWidget(getMainWindow());
+        _ActionWidget->setObjectName(QStringLiteral("_fc_action_widget_"));
+        /* TODO This is a temporary hack until a longterm solution
+        is found, thanks to @realthunder for this pointer.
+        Although _ActionWidget has zero size, it somehow has a
+        'phantom' size without any visible content and will block the top
+        left tool buttons and menus of the application main window.
+        Therefore it is moved out of the way. */
+        _ActionWidget->move(QPoint(-100,-100));
     }
     else {
         for (auto action : _ActionWidget->actions())
@@ -226,7 +234,8 @@ void ToolBarManager::setup(ToolBarItem* toolBarItems)
             toolbars.removeAt(index);
         }
 
-        bool visible = hPref->GetBool(toolbarName.c_str(), true) && (*it)->visibility == ToolBarItem::HideStyle::VISIBLE;
+        bool visible = hPref->GetBool(toolbarName.c_str(), (*it)->visibility == ToolBarItem::HideStyle::VISIBLE);
+        visible &= (*it)->visibility != ToolBarItem::HideStyle::FORCE_HIDE;
         toolbar->setVisible(visible);
         toolbar->toggleViewAction()->setVisible((*it)->visibility != ToolBarItem::HideStyle::FORCE_HIDE);
 

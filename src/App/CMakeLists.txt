@@ -147,6 +147,7 @@ SET(Document_CPP_SRCS
     GeoFeature.cpp
     GeoFeatureGroupExtensionPyImp.cpp
     GeoFeatureGroupExtension.cpp
+    ImagePlane.cpp
     OriginGroupExtensionPyImp.cpp
     OriginGroupExtension.cpp
     PartPyImp.cpp
@@ -166,7 +167,6 @@ SET(Document_CPP_SRCS
     TextDocument.cpp
     Link.cpp
     LinkBaseExtensionPyImp.cpp
-    License.cpp
     License.h
 )
 
@@ -193,6 +193,7 @@ SET(Document_HPP_SRCS
     FeatureTest.h
     GeoFeature.h
     GeoFeatureGroupExtension.h
+    ImagePlane.h
     OriginGroupExtension.h
     Part.h
     Origin.h
@@ -262,6 +263,9 @@ SET(FreeCADApp_CPP_SRCS
     ComplexGeoData.cpp
     ComplexGeoDataPyImp.cpp
     Enumeration.cpp
+    IndexedName.cpp
+    MappedElement.cpp
+    MappedName.cpp
     Material.cpp
     MaterialPyImp.cpp
     Metadata.cpp
@@ -277,7 +281,11 @@ SET(FreeCADApp_HPP_SRCS
     Color.h
     ColorModel.h
     ComplexGeoData.h
+    ElementMap.h
     Enumeration.h
+    IndexedName.h
+    MappedName.h
+    MappedElement.h
     Material.h
     Metadata.h
 )

@@ -282,7 +282,7 @@ TopoDS_Shape DrawComplexSection::prepareShape(const TopoDS_Shape& cutShape, doub
 }
 
 
-void DrawComplexSection::makeSectionCut(TopoDS_Shape& baseShape)
+void DrawComplexSection::makeSectionCut(const TopoDS_Shape& baseShape)
 {
     //    Base::Console().Message("DCS::makeSectionCut() - %s - baseShape.IsNull: %d\n",
     //                            getNameInDocument(), baseShape.IsNull());
@@ -295,7 +295,11 @@ void DrawComplexSection::makeSectionCut(TopoDS_Shape& baseShape)
         connectAlignWatcher =
             QObject::connect(&m_alignWatcher, &QFutureWatcherBase::finished, &m_alignWatcher,
                              [this] { this->onSectionCutFinished(); });
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
         m_alignFuture = QtConcurrent::run(this, &DrawComplexSection::makeAlignedPieces, baseShape);
+#else
+        m_alignFuture = QtConcurrent::run(&DrawComplexSection::makeAlignedPieces, this, baseShape);
+#endif
         m_alignWatcher.setFuture(m_alignFuture);
         waitingForAlign(true);
     }
@@ -820,7 +824,7 @@ TopoDS_Wire DrawComplexSection::makeSectionLineWire()
         else {
             //probably can't happen as cut profile has been checked before this
             Base::Console().Message("DCS::makeSectionLineGeometry - profile is type: %d\n",
-                                    sScaled.ShapeType());
+                                    static_cast<int>(sScaled.ShapeType()));
             return TopoDS_Wire();
         }
     }

@@ -25,6 +25,8 @@
 # include <cassert>
 #endif  // #ifndef _PreComp_
 
+#include <boost/core/ignore_unused.hpp>
+
 #include <Base/Exception.h>
 #include <Base/Vector3D.h>
 
@@ -316,6 +318,7 @@ GeoListModel<GeometryFacadeUniquePtr>::GeoListModel(
     // Under the Single Responsibility Principle GeoListModel cannot be made
     // responsible for releasing those pointers.
     assert(ownerT == false);
+    boost::ignore_unused(ownerT);
 }
 
 template <>
@@ -358,6 +361,8 @@ template SketcherExport int GeoListModel<GeometryFacadeUniquePtr>::getVertexIdFr
 template SketcherExport GeoElementId GeoListModel<GeometryFacadeUniquePtr>::getGeoElementIdFromVertexId(int);
 template SketcherExport Base::Vector3d GeoListModel<GeometryFacadeUniquePtr>::getPoint(int geoId, Sketcher::PointPos pos) const;
 template SketcherExport Base::Vector3d GeoListModel<GeometryFacadeUniquePtr>::getPoint(const GeoElementId &) const;
+template SketcherExport GeoListModel<GeometryFacadeUniquePtr> GeoListModel<GeometryFacadeUniquePtr>::getGeoListModel
+                        (std::vector<GeometryFacadeUniquePtr>&& geometrylist, int intgeocount, bool ownerT);
 #endif
 
 

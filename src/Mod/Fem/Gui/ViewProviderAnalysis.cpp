@@ -31,6 +31,7 @@
 # include <Inventor/nodes/SoSeparator.h>
 #endif
 
+#include <App/Document.h>
 #include <App/MaterialObject.h>
 #include <App/TextDocument.h>
 #include <Gui/ActionFunction.h>
@@ -38,6 +39,10 @@
 #include <Gui/Control.h>
 #include <Gui/Document.h>
 #include <Gui/MainWindow.h>
+#include <Gui/Selection.h>
+#include <Gui/SelectionObject.h>
+#include <Gui/Workbench.h>
+#include <Gui/WorkbenchManager.h>
 #include <Mod/Fem/App/FemAnalysis.h>
 #include <Mod/Fem/App/FemConstraint.h>
 #include <Mod/Fem/App/FemMeshObject.h>
@@ -100,6 +105,11 @@ void ViewProviderFemAnalysis::attach(App::DocumentObject *obj)
 {
     Gui::ViewProviderDocumentObjectGroup::attach(obj);
     extension.attach(this);
+    // activate analysis if currently active workbench is FEM
+    auto *workbench = Gui::WorkbenchManager::instance()->active();
+    if (workbench->name() == "FemWorkbench") {
+        doubleClicked();
+    }
 }
 
 void ViewProviderFemAnalysis::highlightView(Gui::ViewProviderDocumentObject *view)
@@ -117,6 +127,13 @@ bool ViewProviderFemAnalysis::doubleClicked(void)
     // After activation of the analysis the allowed FEM toolbar buttons should become active.
     // To achieve this we must clear the object selection to trigger the selection observer.
     Gui::Command::doCommand(Gui::Command::Gui, "Gui.Selection.clearSelection()");
+    // indicate the activated analysis by selecting it
+    // especially useful for files with 2 or more analyses but also
+    // necessary for the workflow with new files to add a solver as next object
+    std::vector<App::DocumentObject*> selVector {};
+    selVector.push_back(this->getObject());
+    auto *docName = this->getObject()->getDocument()->getName();
+    Gui::Selection().setSelection(docName, selVector);
     return true;
 }
 
@@ -251,15 +268,40 @@ void ViewProviderFemAnalysis::dropObject(App::DocumentObject *obj)
 
 bool ViewProviderFemAnalysis::onDelete(const std::vector<std::string> &)
 {
-    // warn the user if the object has childs
-
+    // warn the user if the object has unselected children
     auto objs = claimChildren();
+    return checkSelectedChildren(objs, this->getDocument(), "analysis");
+}
+
+bool ViewProviderFemAnalysis::checkSelectedChildren(const std::vector<App::DocumentObject*> objs,
+                                                    Gui::Document* docGui, std::string objectName)
+{
+    // warn the user if the object has unselected children
     if (!objs.empty()) {
+        // check if all children are in the selection
+        bool found = false;
+        auto selectionList = Gui::Selection().getSelectionEx(docGui->getDocument()->getName());
+        for (auto child : objs) {
+            found = false;
+            for (Gui::SelectionObject selection : selectionList) {
+                if (std::string(child->getNameInDocument())
+                    == std::string(selection.getFeatName())) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+                break;
+        }
+        if (found)// all children are selected too
+            return true;
+
         // generate dialog
         QString bodyMessage;
         QTextStream bodyMessageStream(&bodyMessage);
         bodyMessageStream << qApp->translate("Std_Delete",
-            "The analysis is not empty, therefore the\nfollowing referencing objects might be lost:");
+            ("The " + objectName + " is not empty, therefore the\nfollowing "
+             "referencing objects might be lost:").c_str());
         bodyMessageStream << '\n';
         for (auto ObjIterator : objs)
             bodyMessageStream << '\n' << QString::fromUtf8(ObjIterator->Label.getValue());

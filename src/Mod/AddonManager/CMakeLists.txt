@@ -25,6 +25,8 @@ SET(AddonManager_SRCS
     addonmanager_installer_gui.py
     addonmanager_macro.py
     addonmanager_macro_parser.py
+    addonmanager_metadata.py
+    addonmanager_pyside_interface.py
     addonmanager_update_all_gui.py
     addonmanager_uninstaller.py
     addonmanager_uninstaller_gui.py
@@ -89,6 +91,7 @@ SET(AddonManagerTestsApp_SRCS
     AddonManagerTest/app/test_installer.py
     AddonManagerTest/app/test_macro.py
     AddonManagerTest/app/test_macro_parser.py
+    AddonManagerTest/app/test_metadata.py
     AddonManagerTest/app/test_utilities.py
     AddonManagerTest/app/test_uninstaller.py
 )

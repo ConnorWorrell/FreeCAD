@@ -90,7 +90,6 @@ FC_LOG_LEVEL_INIT("Sketch",true,true)
 
 PROPERTY_SOURCE(Sketcher::SketchObject, Part::Part2DObject)
 
-
 SketchObject::SketchObject()
 {
     ADD_PROPERTY_TYPE(Geometry,        (nullptr)  ,"Sketch",(App::PropertyType)(App::Prop_None),"Sketch geometry");
@@ -300,11 +299,11 @@ int SketchObject::solve(bool updateGeoAfterSolving/*=true*/)
     }
 
     if(lastHasMalformedConstraints) {
-        Base::Console().Error("Sketch %s has malformed constraints!\n",this->getNameInDocument());
+        Base::Console().Error(this->getFullLabel(), QT_TRANSLATE_NOOP("Notifications","The Sketch has malformed constraints!") "\n");
     }
 
     if(lastHasPartialRedundancies) {
-        Base::Console().Warning("Sketch %s has partially redundant constraints!\n",this->getNameInDocument());
+        Base::Console().Warning(this->getFullLabel(), QT_TRANSLATE_NOOP("Notifications","The Sketch has partially redundant constraints!") "\n");
     }
 
     lastSolveTime=solvedSketch.getSolveTime();
@@ -5350,6 +5349,17 @@ int SketchObject::exposeInternalGeometry(int GeoId)
                 }
                 else {
                     controlpointgeoids[0] = currentgeoid+incrgeo+1;
+                    if (weights[0] == 1.0) {
+                        // if the first weight is 1.0 it's probably going to be non-rational
+                        Sketcher::Constraint *newConstr3 = new Sketcher::Constraint();
+                        newConstr3->Type = Sketcher::Weight;
+                        newConstr3->First = controlpointgeoids[0];
+                        newConstr3->setValue(weights[0]);
+
+                        icon.push_back(newConstr3);
+
+                        isfirstweightconstrained = true;
+                    }
                 }
                 incrgeo++;
             }
@@ -8313,10 +8323,7 @@ void SketchObject::migrateSketch()
 
             Constraints.setValues(std::move(newconstraints));
 
-            Base::Console().Warning("In Sketch %s, parabolas were migrated. Migrated files won't open in previous versions of FreeCAD!!\n",this->Label.getStrValue().c_str());
-
-            this->getDocument()->signalUserMessage(*this, QStringLiteral(QT_TRANSLATE_NOOP("CriticalMessages","Sketch:")) + QStringLiteral(" ") + QString::fromStdString(this->Label.getStrValue()) +
-                QStringLiteral(".\n\n") + QString::fromLatin1(QT_TRANSLATE_NOOP("CriticalMessages","Parabolas were migrated. Migrated files won't open in previous versions of FreeCAD!!")), App::Document::NotificationType::Critical);
+            Base::Console().Critical(this->getFullName(),QT_TRANSLATE_NOOP("Notifications","Parabolas were migrated. Migrated files won't open in previous versions of FreeCAD!!\n"));
         }
     }
 }
