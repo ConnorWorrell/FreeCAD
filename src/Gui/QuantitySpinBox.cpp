@@ -181,17 +181,20 @@ public:
             QString copyChunk = origionalChunk;
             std::reverse(copyChunk.begin(), copyChunk.end());
 
-            //Find units and replace 1/2mm -> 1/2*(1mm), 1^2mm -> 1^2*(1mm)
+            //Reused regex patterns
             static std::string regexUnits = "sAV|VC|lim|nim|im|hpm|[mf]?bl|°|ged|dar|nog|″|′|rroT[uµm]?|K[uµm]?|A[mkM]?|F[pnuµm]?|C|S[uµmkM]?|zH[kMGT]?|H[nuµm]?|mhO[kM]?|J[mk]?|Ve[kM]?|V[mk]?|hWk|sW|lack?|N[mkM]?|g[uµmk]?|lm?|(?<=\\b|[^a-zA-Z])m[nuµmcdk]?|uoht|ni|\"|'|dy|dc|bW|T|t|zo|ts|twc|Wk?|aP[kMG]?|is[pk]|h|G|M|tfc|tfqs|tf|s";
-            static std::string regexUnitlessFunctions = "soca|nisa|2nata|nata|hsoc|hnis|hnat|soc|nat|nis|pex|gol|01gol";
+            static std::string regexUnitlessFunctions = "soca|nisa|2nata|nata|hsoc|hnis|hnat|soc|nat|nis|pxe|gol|01gol";
             static std::string regexConstants = "e|ip|lomm|lom";
             static std::string regexNumber = "\\d+\\s*\\.?\\s*\\d*|\\.\\s*\\d+";
-            copyChunk.replace(QRegularExpression(QString::fromStdString("(" + regexUnits + ")(\\)|(?:\\*|(?:\\)(?:(?:\\s*(?:" + regexConstants + "|\\)(?:[^()]|(?R))*\\((?:" + regexUnitlessFunctions + ")|" + regexNumber + "))|(?R))*\\(|(?:\\s*(?:" + regexConstants + "|\\)(?:[^()]|(?R))*\\((?:" +regexUnitlessFunctions + ")|" + regexNumber + "))))+[\\/\\^](?!(" + regexUnits + ")))")), QString::fromUtf8(")\\11(*\\2"));
-            std::reverse(copyChunk.begin(), copyChunk.end());
+
+            //Find units and replace 1/2mm -> 1/2*(1mm), 1^2mm -> 1^2*(1mm)
+            copyChunk.replace(QRegularExpression(QString::fromStdString("("+regexUnits+")(\\)|(?:\\*|(?:\\)(?:(?:\\s*(?:"+regexConstants+"|\\)(?:[^()]|(?R))*\\((?:"+regexUnitlessFunctions+")|"+regexNumber+"))|(?R))*\\(|(?:\\s*(?:"+regexConstants+"|\\)(?:[^()]|(?R))*\\((?:"+regexUnitlessFunctions+")|"+regexNumber+"))))+[\\/\\^](?!("+regexUnits+")))")), QString::fromUtf8(")\\11(*\\2"));
 
             //Add default units to string if none are present
-            QRegularExpression unitsRe(QString::fromUtf8("(?<=\\b|[^a-zA-Z])(VAs|CV|mil|min|mi|mph|lb[mf]?|deg|rad|gon|[uµm]?Torr|[uµm]?K|[mkM]?A|[pnuµm]?F|C|[uµmkM]?S|[kMGT]?Hz|[nuµm]?H|[mk]?V|[kM]?Ohm|[mk]?J|[kM]?eV|kWh|Ws|k?cal|[mkM]?N|[uµmk]?g|m?l|[nuµmcdk]?m|thou|in|yd|cd|Wb|T|t|oz|st|cwt|k?W|[kMG]?Pa|[pk]si|h|G|M|cft|sqft|ft|s)(?=\\b|[^a-zA-Z])|°|″|′|\"|'|\\p{L}\\.\\p{L}|\\p{L}[\[\(]"));
+            QRegularExpression unitsRe(QString::fromStdString("(?<=\\b|[^a-zA-Z])("+regexUnits+")(?=\\b|[^a-zA-Z])|°|″|′|\"|'|\\p{L}\\.\\p{L}|\\[\\p{L}"));
+
             QRegularExpressionMatch match = unitsRe.match(copyChunk);
+            std::reverse(copyChunk.begin(), copyChunk.end());
             if (!match.hasMatch() && !copyChunk.isEmpty()){ //If no units are found, use default units
                 copyChunk.append(QString::fromUtf8("*(1")+unitStr+QString::fromUtf8(")")); // Add units to the end of chunk *(1unit)
             }
